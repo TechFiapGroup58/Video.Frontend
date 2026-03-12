@@ -1,0 +1,97 @@
+@page "/login"
+@page "/"
+@inject IAuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Login — FIAP X</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-card__header">
+            <span class="brand-logo">▶</span>
+            <h1>FIAP<strong>X</strong></h1>
+            <p>Plataforma de processamento de vídeos</p>
+        </div>
+
+        <EditForm Model="@_model" OnValidSubmit="HandleLogin" class="auth-form">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert--error">@_error</div>
+            }
+
+            <div class="field">
+                <label class="field__label">E-mail</label>
+                <InputText @bind-Value="_model.Email"
+                           class="field__input"
+                           placeholder="seu@email.com"
+                           autocomplete="email" />
+                <ValidationMessage For="() => _model.Email" class="field__error" />
+            </div>
+
+            <div class="field">
+                <label class="field__label">Senha</label>
+                <InputText @bind-Value="_model.Password"
+                           type="password"
+                           class="field__input"
+                           placeholder="••••••••"
+                           autocomplete="current-password" />
+                <ValidationMessage For="() => _model.Password" class="field__error" />
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full" disabled="@_loading">
+                @if (_loading)
+                {
+                    <span class="spinner spinner--sm"></span>
+                    <span>Entrando...</span>
+                }
+                else
+                {
+                    <span>Entrar</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="auth-card__footer">
+            <span>Não tem conta?</span>
+            <a href="/register">Criar conta</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly LoginRequest _model = new();
+    private bool   _loading = false;
+    private string _error   = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await Auth.IsAuthenticatedAsync())
+            Nav.NavigateTo("/dashboard");
+    }
+
+    private async Task HandleLogin()
+    {
+        _loading = true;
+        _error   = string.Empty;
+
+        try
+        {
+            await Auth.LoginAsync(_model);
+            Nav.NavigateTo("/dashboard");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _error = "E-mail ou senha inválidos.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Erro ao conectar: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
