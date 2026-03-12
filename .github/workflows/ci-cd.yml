@@ -38,15 +38,12 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VER }}
 
       - name: Restore
-        working-directory: Video.Frontend
         run: dotnet restore
 
       - name: Build
-        working-directory: Video.Frontend
         run: dotnet build --no-restore -c Release
 
       - name: Unit Tests + Coverage
-        working-directory: Video.Frontend
         run: |
           dotnet test tests/Video.Frontend.Tests.csproj \
             --no-build -c Release \
@@ -58,7 +55,7 @@ jobs:
         id: gate
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          filename:       "Video.Frontend/coverage/**/coverage.cobertura.xml"
+          filename:       "coverage/**/coverage.cobertura.xml"
           badge:          true
           fail_below_min: true
           format:         markdown
@@ -166,8 +163,8 @@ jobs:
 
       - uses: docker/build-push-action@v5
         with:
-          context:    Video.Frontend
-          file:       Video.Frontend/Dockerfile
+          context:    .
+          file:       Dockerfile
           push:       true
           tags:       ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
@@ -196,7 +193,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
 
       - name: Apply manifests
-        run: kubectl apply -f Video.Frontend/k8s/
+        run: kubectl apply -f k8s/
 
       - name: Update image
         run: |
