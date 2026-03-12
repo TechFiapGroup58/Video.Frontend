@@ -1,0 +1,83 @@
+@inherits LayoutComponentBase
+@inject IAuthService Auth
+@inject NavigationManager Nav
+
+<div class="layout">
+    @if (_showNav)
+    {
+        <aside class="sidebar">
+            <div class="sidebar__brand">
+                <span class="brand__icon">▶</span>
+                <span class="brand__name">FIAP<strong>X</strong></span>
+            </div>
+
+            <nav class="sidebar__nav">
+                <NavLink href="/dashboard" class="nav-item" ActiveClass="nav-item--active" Match="NavLinkMatch.All">
+                    <span class="nav-item__icon">⊞</span>
+                    <span>Dashboard</span>
+                </NavLink>
+
+                <NavLink href="/upload" class="nav-item" ActiveClass="nav-item--active">
+                    <span class="nav-item__icon">↑</span>
+                    <span>Enviar Vídeo</span>
+                </NavLink>
+
+                <NavLink href="/videos" class="nav-item" ActiveClass="nav-item--active">
+                    <span class="nav-item__icon">▤</span>
+                    <span>Meus Vídeos</span>
+                </NavLink>
+
+                @* Descomentar quando ProcessorService estiver pronto:
+                <NavLink href="/processing" class="nav-item" ActiveClass="nav-item--active">
+                    <span class="nav-item__icon">⚙</span>
+                    <span>Processamentos</span>
+                </NavLink>
+                *@
+            </nav>
+
+            <div class="sidebar__footer">
+                @if (_session is not null)
+                {
+                    <div class="user-info">
+                        <div class="user-info__avatar">@_session.FullName[0]</div>
+                        <div class="user-info__details">
+                            <span class="user-info__name">@_session.FullName</span>
+                            <span class="user-info__email">@_session.Email</span>
+                        </div>
+                    </div>
+                }
+                <button class="btn-logout" @onclick="Logout">Sair</button>
+            </div>
+        </aside>
+    }
+
+    <main class="main @(_showNav ? "main--with-sidebar" : "")">
+        <Toast @ref="_toast" />
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool        _showNav = false;
+    private UserSession? _session;
+    private Toast?       _toast;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _session = await Auth.GetSessionAsync();
+        _showNav = _session is not null;
+
+        Nav.LocationChanged += (_, _) => InvokeAsync(async () =>
+        {
+            _session = await Auth.GetSessionAsync();
+            _showNav = _session is not null;
+            StateHasChanged();
+        });
+    }
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/login");
+    }
+}

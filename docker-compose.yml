@@ -1,0 +1,133 @@
+version: "3.9"
+
+# Sobe o Frontend + Auth + Upload juntos para desenvolvimento local.
+# Cada serviço usa sua própria imagem pré-construída ou build local.
+
+services:
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fiapx-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth-service
+      - upload-service
+
+  auth-service:
+    image: ghcr.io/SEU_ORG/fiapx-auth-service:latest
+    container_name: fiapx-auth
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres-auth;Port=5432;Database=fiapx_auth;Username=fiapx;Password=fiapx@2024"
+      Jwt__SecretKey:  "fiapx-super-secret-key-at-least-32-chars-long!"
+      Jwt__Issuer:     "fiapx-auth"
+      Jwt__Audience:   "fiapx-services"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+
+  upload-service:
+    image: ghcr.io/SEU_ORG/fiapx-upload-service:latest
+    container_name: fiapx-upload
+    restart: unless-stopped
+    ports:
+      - "5001:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres-upload;Port=5432;Database=fiapx_upload;Username=fiapx;Password=fiapx@2024"
+      Jwt__SecretKey:    "fiapx-super-secret-key-at-least-32-chars-long!"
+      Jwt__Issuer:       "fiapx-auth"
+      Jwt__Audience:     "fiapx-services"
+      S3__ServiceUrl:    "http://minio:9000"
+      S3__AccessKey:     "fiapx"
+      S3__SecretKey:     "fiapx@2024"
+      S3__BucketName:    "fiapx-videos"
+      S3__Region:        "us-east-1"
+      S3__UsePathStyle:  "true"
+      RabbitMq__Host:    "rabbitmq"
+      RabbitMq__Port:    "5672"
+      RabbitMq__Username: "fiapx"
+      RabbitMq__Password: "fiapx@2024"
+    depends_on:
+      postgres-upload:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: fiapx-pg-auth
+    environment:
+      POSTGRES_USER: fiapx
+      POSTGRES_PASSWORD: fiapx@2024
+      POSTGRES_DB: fiapx_auth
+    volumes:
+      - pg_auth:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fiapx -d fiapx_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-upload:
+    image: postgres:16-alpine
+    container_name: fiapx-pg-upload
+    environment:
+      POSTGRES_USER: fiapx
+      POSTGRES_PASSWORD: fiapx@2024
+      POSTGRES_DB: fiapx_upload
+    volumes:
+      - pg_upload:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fiapx -d fiapx_upload"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: fiapx-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: fiapx
+      MINIO_ROOT_PASSWORD: fiapx@2024
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: fiapx-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: fiapx
+      RABBITMQ_DEFAULT_PASS: fiapx@2024
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  pg_auth:
+  pg_upload:
+  minio_data:
+  rabbitmq_data:

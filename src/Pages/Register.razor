@@ -1,0 +1,109 @@
+@page "/register"
+@inject IAuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Criar Conta — FIAP X</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-card__header">
+            <span class="brand-logo">▶</span>
+            <h1>FIAP<strong>X</strong></h1>
+            <p>Crie sua conta</p>
+        </div>
+
+        <EditForm Model="@_model" OnValidSubmit="HandleRegister" class="auth-form">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert--error">@_error</div>
+            }
+
+            <div class="field">
+                <label class="field__label">Nome completo</label>
+                <InputText @bind-Value="_model.FullName"
+                           class="field__input"
+                           placeholder="João Silva"
+                           autocomplete="name" />
+                <ValidationMessage For="() => _model.FullName" class="field__error" />
+            </div>
+
+            <div class="field">
+                <label class="field__label">E-mail</label>
+                <InputText @bind-Value="_model.Email"
+                           class="field__input"
+                           placeholder="seu@email.com"
+                           autocomplete="email" />
+                <ValidationMessage For="() => _model.Email" class="field__error" />
+            </div>
+
+            <div class="field">
+                <label class="field__label">Senha</label>
+                <InputText @bind-Value="_model.Password"
+                           type="password"
+                           class="field__input"
+                           placeholder="Mínimo 8 caracteres"
+                           autocomplete="new-password" />
+                <ValidationMessage For="() => _model.Password" class="field__error" />
+            </div>
+
+            <div class="field">
+                <label class="field__label">Confirmar senha</label>
+                <InputText @bind-Value="_model.ConfirmPassword"
+                           type="password"
+                           class="field__input"
+                           placeholder="Repita a senha"
+                           autocomplete="new-password" />
+                <ValidationMessage For="() => _model.ConfirmPassword" class="field__error" />
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full" disabled="@_loading">
+                @if (_loading)
+                {
+                    <span class="spinner spinner--sm"></span>
+                    <span>Criando conta...</span>
+                }
+                else
+                {
+                    <span>Criar conta</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="auth-card__footer">
+            <span>Já tem conta?</span>
+            <a href="/login">Entrar</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly RegisterRequest _model = new();
+    private bool   _loading = false;
+    private string _error   = string.Empty;
+
+    private async Task HandleRegister()
+    {
+        _loading = true;
+        _error   = string.Empty;
+
+        try
+        {
+            await Auth.RegisterAsync(_model);
+            Nav.NavigateTo("/dashboard");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            _error = "Este e-mail já está cadastrado.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Erro ao criar conta: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
