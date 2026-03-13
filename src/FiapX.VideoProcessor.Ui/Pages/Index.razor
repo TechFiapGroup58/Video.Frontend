@@ -1,0 +1,55 @@
+
+@page "/"
+@using Microsoft.AspNetCore.Components.Forms
+
+<h1>🎬 FIAP X - Processador de Vídeos</h1>
+
+<div class="container">
+    <p class="subtitle">
+        Faça upload de um vídeo e receba um ZIP com todos os frames extraídos!
+    </p>
+
+    <InputFile OnChange="UploadFile" />
+
+    @if (loading)
+    {
+        <p class="loading">⏳ Processando vídeo...</p>
+    }
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="result">@message</div>
+    }
+</div>
+
+@code {
+
+    bool loading = false;
+    string message = "";
+
+    async Task UploadFile(InputFileChangeEventArgs e)
+    {
+        loading = true;
+        message = "";
+
+        try
+        {
+            var file = e.File;
+
+            using var content = new MultipartFormDataContent();
+            content.Add(new StreamContent(file.OpenReadStream()), "video", file.Name);
+
+            var http = new HttpClient();
+            var response = await http.PostAsync("/upload", content);
+
+            var text = await response.Content.ReadAsStringAsync();
+            message = text;
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+
+        loading = false;
+    }
+}

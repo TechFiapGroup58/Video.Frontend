@@ -1,0 +1,36 @@
+
+body {
+    font-family: Inter, Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    margin:0;
+}
+
+.container{
+    max-width:700px;
+    margin:auto;
+    padding:40px;
+}
+
+h1{
+    text-align:center;
+}
+
+.subtitle{
+    text-align:center;
+    color:#cbd5f5;
+}
+
+input[type=file]{
+    margin-top:20px;
+}
+
+.loading{
+    margin-top:20px;
+}
+
+.result{
+    margin-top:20px;
+    padding:10px;
+    background:#1e293b;
+}
